@@ -1,0 +1,386 @@
+---
+title: "Building Safety Fund Visualisations"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+
+```{r, warning = FALSE, message = FALSE, fig.width = 10, fig.height = 5}
+
+# import core libraries
+library(tidyverse)
+library(janitor)  # for cleaning the variables names in the imported data
+library(readxl)   # for reading in data in an Excel format
+
+# import libraries used for building the plot
+library(waffle)
+library(hrbrthemes)
+library(patchwork)
+library(ggtext)
+library(viridisLite)
+library(ggtext)
+
+# import fonts to be used in the final figure
+import_roboto_condensed()
+
+
+
+```
+
+awaiting decision of eligibility / funding allocated / rejected
+take out withdrawals
+
+```{r}
+applications <- 2820
+withdrawn <- 349
+active_apps <- applications - withdrawn
+
+ineligible <- 354
+
+# social sector approved + private non-ACM approved 
+# + private ACM and non-ACM approved
+fully_approved <- 31 + 42 + 13  # this is the total # buildings 
+                                # have been allocated to
+
+awaiting_decision <- active_apps - ineligible - fully_approved
+
+perc_awaiting_decision <- round(awaiting_decision / applications * 100, 0)
+
+df <- tibble(status = c(rep("awaiting decision", awaiting_decision),
+                        rep("funding approved", fully_approved),
+                        rep("ineligible", ineligible)
+                        )
+             )
+
+
+df <- tribble(
+  ~status, ~count,
+  "Awaiting decision", awaiting_decision,
+  "Funding approved", fully_approved,
+  "Rejected", ineligible) %>% 
+  mutate(status = factor(status,
+                         levels = c("Rejected", 
+                                    "Awaiting decision", 
+                                    "Funding approved"))
+  ) %>% 
+  arrange(status)
+df
+```
+```{r, fig.height=7.5, fig.width=5}
+df %>% 
+  ggplot(aes(fill = status, values = count / 10)) +
+  geom_waffle(n_rows = 10, size = 0.33, colour = "white", flip = TRUE) +
+  
+  guides(fill = guide_legend(reverse = TRUE)) +
+  
+  scale_fill_manual(values = c(alpha("red", 0.5),
+                               "grey35", 
+                               alpha("green", 0.5)
+                               )) +
+
+  
+  coord_equal() +
+  labs(title = glue::glue("{perc_awaiting_decision}% of applicants to the Building Safety Fund\nare awaiting a decision"),
+       subtitle = "Each square represents 10 buildings that have applied to the fund",
+       caption = "Source: https://www.gov.uk/guidance/remediation-of-non-acm-buildings\nData as of 5th March 2021 ") +
+  
+  theme_ipsum_rc(grid="") +
+  theme_enhance_waffle() +
+  
+  theme(text = element_text(family = "Roboto Condensed"),
+        legend.text = element_text(family = "Roboto Condensed"),
+        plot.margin = margin(b = 1, r = 25, l = 25),
+        legend.position = "top",
+        legend.title = element_blank(),
+        plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        plot.caption = element_text(hjust = 0)
+  )
+  
+
+ggsave("bsf_1.png", height = 7.5, width = 5)
+```
+```{r}
+# based on BSF only being for tall buildings, and building with multiple
+# towers making single applications
+num_lh_per_building <- 100
+
+num_bsf_suc <- 
+# social sector + private full application approved non-ACM only  
+total_bst_suc <- 42 + 31 
+total_bst_allocated <- 71.6e6 + 58.2e6
+
+ave_funding_per_building <- total_bst_allocated / total_bst_suc
+ave_funding_per_lh <- ave_funding_per_building / num_lh_per_building
+ave_funding_per_lh
+```
+```{r}
+costs <- tribble(
+  ~short_name, ~remediation, ~cost, ~funded,
+  "CE", "Cladding and insulation eligible for funding", 20000, 1,
+  "CI", "Cladding and insulation not eligible for funding", 10000, 0,
+  "WB", "Wood balconies", 10000, 0,
+  "WW", "Waking watch", 5000, 0,
+  "FA", "Fire alarms", 2500, 0,
+  "MC", "Missing compartmentalisation", 30000, 0
+)
+
+costs_not_eligible_for_funding <- sum(costs$cost[costs$funded == 0])
+
+costs <- costs %>% 
+  add_row(short_name = c("MF","VAT"), 
+          remediation = c("Managing agents fees", "VAT"), 
+          cost = c(0.1 * costs_not_eligible_for_funding, 
+                   0.2 * costs_not_eligible_for_funding), 
+          funded = c(0,0))
+
+costs %>% 
+  ggplot(aes(fill = remediation, values = cost / 1000)) +
+  geom_waffle(n_rows = 5, size = 0.33, colour = "white", flip = TRUE) +
+  
+  coord_equal() +
+  
+  theme_ipsum_rc(grid="") +
+  theme_enhance_waffle() +
+  
+  facet_wrap(~funded)
+```
+```{r}
+library(ggraph)
+library(tidygraph)
+
+flare$vertices
+
+edges <- data.frame(
+  from = c("required", 
+           "required",
+           "available BSF",
+           "available BSF"),
+  to = c("available BSF", 
+         "available ACM",
+         "allocated BSF",
+         "unallocated BSF"
+         )
+)
+
+nodes <- data.frame(
+  node_name = c("required", "available BSF", "available ACM", "allocated BSF", "unallocated BSF"),
+  size = c(500, 5, 5, 1, 4)
+)
+
+# row.names(edges) <- c(1,2,3)
+# row.names(nodes) <- c(1,2,3,4)
+
+my_graph <- tbl_graph(nodes = nodes, edges = edges)
+
+#my_graph <- as_tbl_graph(highschool)
+
+# nodes <- data.frame(
+#   node_name = c("required", "available", "allocated"),
+#   size = c(50, 5, 0.5)
+# )
+# row.names(nodes) <-  c(1, 2, 3)
+# 
+# my_graph_demo <- graph_from_data_frame(flare$edges, vertices = flare$vertices)
+# 
+# my_graph <- graph_from_data_frame(edges, vertices = nodes)
+
+ggraph(my_graph, layout = 'circlepack', weight = size) +
+  geom_node_circle() +
+  coord_fixed() +
+  theme_void()
+  # geom_edge_link() + 
+  # geom_node_point(aes(colour = depth)) +
+  # coord_fixed()
+
+# nodes <- data.frame(
+#   name = c("flare.analytics.cluster",
+#            "flare.analytics.cluster.AgglomerativeCluster"),
+#   size = c(10, 5)
+# )
+# 
+# graph <- tbl_graph(nodes = nodes, edges = slice_head(flare$edges))
+# set.seed(1)
+# ggraph(graph, 'circlepack', weight = size) + 
+#   # geom_node_circle(aes(fill = depth), size = 0.25, n = 50) + 
+#   # coord_fixed()
+#   geom_edge_link() + 
+#   geom_node_point(aes(colour = depth)) +
+#   coord_fixed()
+```
+```{r}
+library(igraph)
+# We need a data frame giving a hierarchical structure. Let's consider the flare dataset:
+edges <- flare$edges
+
+edges <- data.frame(
+  from = c("required", "available"),
+  to = c("available", "allocated")
+)
+
+nodes <- data.frame(
+  node_name = c("required", "available", "allocated"),
+  size = c(50, 5, 0.5)
+)
+ 
+# Usually we associate another dataset that give information about each node of the dataset:
+vertices <- flare$vertices
+ 
+# Then we have to make a 'graph' object using the igraph library:
+mygraph <- graph_from_data_frame( edges, vertices=nodes )
+ 
+# Make the plot
+ggraph(mygraph, layout = 'circlepack') + 
+  geom_node_circle() +
+  theme_void()
+```
+
+```{r}
+library(ggforce)
+library(ggthemes)
+library(scales)
+
+pal <- economist_pal(fill = TRUE)(6)
+show_col(pal)
+```
+
+
+Gov funding - https://www.gov.uk/government/news/government-to-bring-an-end-to-unsafe-cladding-with-multi-billion-pound-intervention
+
+Taylor Wimpey - https://www.bbc.co.uk/news/business-56250730
+
+
+```{r, fig.height=5, fig.width=5}
+circles_issue <- tribble(
+  ~x, ~y, ~value, ~label,
+  0, 0, 50, "Government funding remains a drop in the ocean of\nBritain's £50 billion fire safety crisis"
+) %>% 
+  mutate(r = sqrt(value / (2 * pi)),
+         y = y + r)
+
+circles_bsf_avail <- tribble(
+  ~x, ~y, ~value, ~label,
+  0, 0, 5, "There is £5 billion available\n in the Government's Building Safety Fund"
+) %>% 
+  mutate(r = sqrt(value / (2 * pi)),
+         y = y + r)
+
+circles_bsf_allo <- tribble(
+  ~x, ~y, ~value, ~label,
+  0, 0, 0.2268, "Only £226.8\nmillion has\nbeen awarded",
+) %>% 
+  mutate(r = sqrt(value / (2 * pi)),
+         y = y + r)
+
+circles_dev <- tribble(
+  ~x, ~y, ~value, ~label,
+  0, 5, 0.125, "Taylor Wimpey",
+  0, 5.3, 0.075, "Persimmon"
+) %>% 
+  mutate(r = sqrt(value / (2 * pi)))
+
+
+
+ggplot() +
+  
+  geom_circle(data = circles_issue,
+              mapping = aes(x0 = x, y0 = y, r = r), 
+              fill = pal[1], colour = pal[1], alpha = 0.3) +
+  
+  # geom_text(data = circles_issue,
+  #           mapping = aes(x = x, y = y + r + 0.5, label = label),
+  #           family = "Roboto Condensed",
+  #           fontface = "bold",
+  #           colour = pal[1],
+  #           size = 6) +
+  
+  geom_circle(data = circles_bsf_avail,
+              mapping = aes(x0 = x, y0 = y, r = r),
+              colour = pal[4], fill = pal[4], alpha = 0.5) +
+  
+  geom_text(data = circles_bsf_avail,
+              mapping = aes(x = x, y = y + r + 0.55, label = label),
+            family = "Roboto Condensed", colour = pal[4],
+            fontface = "bold", size = 4) +
+  
+  geom_circle(data = circles_bsf_allo,
+              mapping = aes(x0 = x, y0 = y, r = r),
+              colour = pal[2], fill = pal[2], alpha = 0.7) +
+  
+  geom_text(data = circles_bsf_allo,
+              mapping = aes(x = x, y = y + r + 0.55, label = label),
+            family = "Roboto Condensed", colour = pal[2],
+            fontface = "bold", size = 3.5) +
+
+  coord_equal() +
+  theme_void() +
+  labs(caption = "**Sources:** Colmore Tang Construction in The Telegraph (18th April 2021)
+       <br>Ministry of Housing, Communities & Local Government (5th March 2021)<br>**Data viz:** @analytics_urban",
+       title = "**Government funding remains a drop in the ocean of<br>Britain's £50 billion fire safety crisis**") +
+  theme(plot.margin = margin(b = 5, t = 15),
+        plot.title = element_markdown(colour = pal[1], hjust = 0.5,
+                                      size = 14),
+        text = element_text(family = "Roboto Condensed"),
+        plot.caption = element_markdown(hjust = 0)
+        )
+
+ggsave("ocean.png", width = 5, height = 6)
+```
+
+
+```{r}
+library(ggalluvial)
+
+head(as.data.frame(UCBAdmissions), n = 12)
+
+basics_flow <- tribble(
+  ~cost, ~paying, ~Freq, ~is_lh,
+  "A", "LH", 47, TRUE,
+  "A", "Dev", 2, FALSE,
+  "A", "Gov", 3, FALSE
+)
+
+is_alluvia_form(basics_flow)
+
+is_alluvia_form(as.data.frame(UCBAdmissions), axes = 1:3, silent = TRUE)
+
+ggplot(basics_flow,
+       aes(y = Freq, axis1 = cost, axis2 = paying)) +
+  geom_alluvium(aes(fill= is_lh), width = 1/12) +
+  geom_stratum(width = 1/12, fill = "black", color = "grey") +
+  geom_label(stat = "stratum", aes(label = after_stat(stratum))) +
+  scale_x_discrete(limits = c("Gender", "Dept"), expand = c(.05, .05)) +
+  scale_fill_brewer(type = "qual", palette = "Set1") +
+  ggtitle("UC Berkeley admissions and rejections, by sex and department")
+```
+
+```{r}
+# library
+library(circlize)
+ 
+# Create an edge list: a list of connections between 10 origin nodes, and 10 destination nodes:
+# origin <- paste0("orig ", sample(c(1:10), 20, replace = T))
+# destination <- paste0("dest ", sample(c(1:10), 20, replace = T))
+# data <- data.frame(origin, destination)
+
+# adjaceny list
+ad_list <- tribble(
+  ~from, ~to, ~value,
+  "Gov", "BO", 3,
+  "LH", "BO", 48,
+  "Const", "BO", 1,
+  "BO", "Const", 52
+)
+
+# Transform input data in a adjacency matrix
+adjacencyData <- with(ad_list, table(from, to))
+ 
+# Charge the circlize library
+ 
+# Make the circular plot
+chordDiagram(ad_list, transparency = 0.5, directional = 1, diffHeight = mm_h(5))
+
+```
+
