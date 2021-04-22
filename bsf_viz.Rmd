@@ -383,4 +383,93 @@ adjacencyData <- with(ad_list, table(from, to))
 chordDiagram(ad_list, transparency = 0.5, directional = 1, diffHeight = mm_h(5))
 
 ```
+```{r}
+la_data <- read_csv("MHCLG_BSF_and_ACM_BSF_by_Local_Authority.csv", skip = 1)
+```
+```{r}
+library(maps)
+
+UK <- map_data("world") %>% 
+  filter(region == "UK")
+
+background_map <- ggplot() +
+  geom_polygon(data = UK,
+       mapping = aes(x = long, y = lat, group = group),
+       fill = "grey", alpha = 0.3) +
+  theme_void() +
+  coord_map() +
+  ylim(50,59)
+
+background_map
+```
+```{r}
+library(sf)
+
+cas_uas <- st_read("boundaries_2019/Counties_and_Unitary_Authorities_(December_2019)_Boundaries_UK_BUC.shp")
+
+'%nin%' <- function(x,y)!('%in%'(x,y))
+
+la_data$`Local Authority`[la_data$`Local Authority` %nin% cas_uas$ctyua19nm]
+```
+
+
+
+```{r}
+library(fuzzyjoin)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+UK <- ne_states(geounit = "england", returnclass = "sf")
+
+bsd_geo <- merge(st_centroid(cas_uas), la_data %>% 
+                         rename(ctyua19nm = `Local Authority`)) %>% 
+  arrange(Count)
+
+p <- ggplot() +
+
+  geom_sf(data = UK, colour = "grey90", fill = "grey90") +
+  
+  geom_sf(data = bsd_geo,
+          mapping = aes(colour = Count, size = Count,
+                        label = ctyua19nm)) + 
+
+  scale_size_continuous(range = c(1,5)) +
+  scale_colour_viridis_c(option = "magma", begin = 0, end = .8, direction = -1) +
+  theme_void() +
+  coord_sf()
+
+p
+
+ggsave("test.png", p)
+plotly::ggplotly(p)
+```
+
+```{r}
+la_data %>% 
+  na.omit() %>% 
+  slice_max(order_by = Count, n = 10) %>% 
+  kableExtra::kable() %>% 
+  kableExtra::kable_minimal()
+```
+
+
+Code for working out centroid coordinates (in latitude and longitude) of local authorities
+```{r, eval=FALSE}
+st_centroid(las)
+
+las_geometry <- st_geometry(las)
+
+la_centroids <- st_centroid(las_geometry)
+
+la_centroids_trans <- st_transform(la_centroids, crs = 4326)
+
+
+la_centroid_coords <- as.data.frame(st_coordinates(la_centroids_trans)) %>% 
+  bind_cols(lad17cd = las$lad17cd, 
+            lad17nm = las$lad17nm) %>% 
+  relocate(lad17cd, lad17nm) %>% 
+  rename(long = X, lat = Y)
+
+la_centroid_coords
+```
 
