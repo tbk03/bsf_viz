@@ -327,6 +327,7 @@ ggplot() +
         )
 
 ggsave("ocean.png", width = 5, height = 6)
+ggsave("ocean.svg", width = 5, height = 6)
 ```
 
 
@@ -419,7 +420,7 @@ library(fuzzyjoin)
 library(rnaturalearth)
 library(rnaturalearthdata)
 
-UK <- ne_states(geounit = "england", returnclass = "sf")
+england <- ne_states(geounit = "england", returnclass = "sf")
 
 bsd_geo <- merge(st_centroid(cas_uas), la_data %>% 
                          rename(ctyua19nm = `Local Authority`)) %>% 
@@ -427,7 +428,7 @@ bsd_geo <- merge(st_centroid(cas_uas), la_data %>%
 
 p <- ggplot() +
 
-  geom_sf(data = UK, colour = "grey90", fill = "grey90") +
+  geom_sf(data = england, colour = "grey90", fill = "grey90") +
   
   geom_sf(data = bsd_geo,
           mapping = aes(colour = Count, size = Count,
@@ -435,23 +436,176 @@ p <- ggplot() +
 
   scale_size_continuous(range = c(1,5)) +
   scale_colour_viridis_c(option = "magma", begin = 0, end = .8, direction = -1) +
-  theme_void() +
-  coord_sf()
+  theme_map() +
+  coord_sf() +
+
+  labs(colour = "Number of\napplications\nfrom within\nthe local\nauthority\nto the BSF") +
+  guides(size = FALSE) +
+  theme(legend.position="left",
+        legend.title = element_text(size = 8))
 
 p
 
 ggsave("test.png", p)
-plotly::ggplotly(p)
+#plotly::ggplotly(p)
 ```
 
 ```{r}
-la_data %>% 
+library(gridExtra)
+library(patchwork)
+
+num_apps <- la_data %>% 
+  na.omit() %>% 
+  summarise(total_apps = sum(Count)) %>% 
+  pull()
+
+
+# Theme for text tables
+t1 <- ttheme_minimal(
+        core=list(
+         fg_params=list(fontfamily="Roboto Condensed")
+        ),
+        rowhead=list(
+         fg_params=list(fontfamily="Roboto Condensed")
+        ),
+        colhead=list(
+         fg_params=list(fontfamily="Roboto Condensed")
+        ),
+        base_size = 8
+)
+
+
+tab <- la_data %>% 
   na.omit() %>% 
   slice_max(order_by = Count, n = 10) %>% 
-  kableExtra::kable() %>% 
-  kableExtra::kable_minimal()
+  rename(`Applications` = Count) %>%
+  tableGrob(theme = t1, rows = NULL)
+
+grid.arrange(tab)
+
+comb <- p + tab
+
+comb +
+  plot_annotation(title = glue::glue("{num_apps} applications to the Government's Building Safety Fund (BSF) reveal\nthe nationwide scope of the cladding and fire safety crisis\n"),
+                  subtitle = "\nThe list of the 10 local authorities with the most applications\n to the BSF shows London is the epicenter of the crisis\n",
+                  
+                  caption = "**Source:** Ministry of Housing, Communities & Local Government (5th March 2021)<br>**Data viz:** @analytics_urban",
+                  
+                  theme = theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+                                plot.subtitle = element_text(hjust = 0.5),
+                                text = element_text(family = "Roboto Condensed"),
+                                plot.caption = element_markdown(hjust = 0)
+                                )
+                  )
+
+ggsave("bsf_app_map.png")
+
+```
+https://www.cultureofinsight.com/post/multivariate-dot-density-maps-in-r-with-sf-ggplot2
+Constituencies https://www.dropbox.com/s/4iajcx25grpx5qi/uk_650_wpc_2017_full_res_v1.8.zip?dl=0
+
+```{r}
+library(maptools)
+
+# calculate number of applications (counting London as one city)
+# **********************************************************************
+
+# not needed ... I think
+county_region <- read_csv("https://opendata.arcgis.com/datasets/c5a22d60313e41f0b81d07cfd580bc95_0.csv",
+    col_types = cols(
+    CTY20CD = col_character(),
+    CTY20NM = col_character()
+  ))
+
+la_region <- read_csv("https://opendata.arcgis.com/datasets/6a41affae7e345a7b2b86602408ea8a2_0.csv")
+
+la_data_regions <- la_data %>% 
+  left_join(la_region, by = c("Local Authority" = "LAD21NM")) %>% 
+  filter(!is.na(`Local Authority`))
+
+# identify London LAs
+num_london_apps <- la_data_regions %>% 
+  filter(RGN21NM == "London") %>% 
+  summarise(london_total = sum(Count)) %>% 
+  pull()
+
+
+# remove London LAs
+la_data_regions_simp <- la_data_regions %>% 
+  filter(RGN21NM != "London" | is.na(RGN21NM)) %>% 
+  select(`Local Authority`, Count) %>% 
+  add_row(`Local Authority` = "London", Count = num_london_apps)
+
+# read in shape for boundaries and convert to geometry to lat and long
+# the conversion shoul make it easier to plot later on
+boundaries_lat_long <- st_read("boundaries_2019/Counties_and_Unitary_Authorities_(December_2019)_Boundaries_UK_BUC.shp") %>% 
+  st_transform(4326)
+
+#
+#st_read("constituencies/")
+
+bsd_geo <- merge(boundaries_lat_long, la_data_regions_simp %>% 
+                         rename(ctyua19nm = `Local Authority`)) %>% 
+  arrange(Count)
+
+# generate random location within LA for each application
+num_dots <- as.data.frame(bsd_geo) %>% 
+  select(Count) 
+
+buildings <- st_sample(bsd_geo, size = num_dots$Count, type = "random") %>% 
+  # st_cast("POINT") %>%                                          
+  # st_coordinates() %>%                                           
+  # as_tibble() %>%                                               
+  # setNames(c("lon","lat")) %>% 
+  {.}
+
+# code from https://www.r-bloggers.com/2019/04/zooming-in-on-maps-with-sf-and-ggplot2/
+# zoom_to <- c(0, 51.5074)  # london
+# 
+# zoom_level <- 9
+# 
+# lon_span <- 360 / 2^zoom_level
+# lat_span <- 180 / 2^zoom_level
+# 
+# lon_bounds <- c(zoom_to[1] - lon_span / 2, zoom_to[1] + lon_span / 2)
+# lat_bounds <- c(zoom_to[2] - lat_span / 2, zoom_to[2] + lat_span / 2)
+
+# identify top n cities
+top_cites <- bsd_geo %>% 
+  slice_max(Count, n = 5)
+
+
+ggplot() +
+  geom_sf(data = england, colour = "grey95", fill = "grey95") +
+  #geom_sf(data = boundaries_lat_long, alpha = 0) +
+  geom_sf(data = buildings, size = 1, alpha = 0.2) +
+  
+  geom_sf_label(data = top_cites, aes(label = ctyua19nm), nudge_x = 2) +
+  
+  theme_map() +
+  coord_sf() #+
+ # coord_sf(xlim = lon_bounds, ylim = lat_bounds)
+  
+#ggsave("test2.svg")
 ```
 
+```{r}
+top_cites %>% 
+  select(ctyua19nm, Count)
+```
+
+
+```{r}
+la_data %>% 
+  ggplot(aes(x = `Local Authority`, y = Count)) +
+  geom_histogram(stat = "identity") +
+  
+  theme_light() +
+  theme(plot.background = element_rect(fill = "transparent"),
+        panel.background = element_rect(fill = "transparent"))
+
+ggsave("test3.svg")
+```
 
 Code for working out centroid coordinates (in latitude and longitude) of local authorities
 ```{r, eval=FALSE}
@@ -471,5 +625,9 @@ la_centroid_coords <- as.data.frame(st_coordinates(la_centroids_trans)) %>%
   rename(long = X, lat = Y)
 
 la_centroid_coords
+```
+
+```{r}
+
 ```
 
