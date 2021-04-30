@@ -1,0 +1,102 @@
+---
+title: "bsf_map"
+author: "Chris J. Martin"
+date: "30/04/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(ggthemes)
+```
+
+Exact location of each 
+
+```{r}
+#******************************************************************************
+# READ IN AND PROCESS DATA REQUIRED TO CREATE THE PLOT
+#******************************************************************************
+
+# get background layer for the map from a package
+england <- ne_states(geounit = "england", returnclass = "sf")
+
+# read MCLG in data (counts of BSF applications)
+# cross check with .csv - there should be 81 rows (excluding column names)
+la_data <- read_csv("MHCLG_BSF_and_ACM_BSF_by_Local_Authority.csv", skip = 1)
+
+# read in shape for LA boundaries and set crs
+boundaries_lat_long <- st_read("boundaries_2019/Counties_and_Unitary_Authorities_(December_2019)_Boundaries_UK_BUC.shp") %>% 
+  st_transform(4326)
+
+# merge LA boundaries and BSF application counts
+bsd_geo <- merge(boundaries_lat_long,
+                 # rename variable to so there is a shared key between the two
+                 # datsets
+                 la_data %>% 
+                   rename(ctyua19nm = `Local Authority`)
+) %>% 
+  arrange(Count)  
+
+# confirm number of local authorities in merged  dataset
+# there should be 80 features 
+# (rather than 81 as the total in la_data won't match a geometry in the LA boundaries dataset)
+bsd_geo
+
+# confirm that data for key variables is complete
+bsd_geo %>% 
+  skimr::skim(ctyua19nm, geometry, Count)
+
+# confirm no NAs in geometry columns 
+# (as not sure if skimr work with geometries - see warning message)
+print(glue::glue("Number of LAs with no geometry: {sum(is.na(bsd_geo$geometry))}"))
+
+#******************************************************************************
+# SIMULATE LOCATIONS OF BSF APPLICATION (WITH EACH LOCAL AUTHORITY)
+#******************************************************************************
+
+# create a vector of the application counts for each Local Authority
+num_dots <- as.data.frame(bsd_geo) %>% 
+  select(Count) 
+
+# confirm the total number of application is correct
+print(glue::glue("Number of dots to be plotted: {sum(num_dots)}")) # should be 2760
+
+# for each LA generate an appropriate number of random points within it's boundaries
+# one point per application
+buildings <- st_sample(bsd_geo, size = num_dots$Count, type = "random")
+
+# print output to confirm the correct number of locations for applications
+# have been simulated
+buildings # there should be 2760 features in the output 
+
+#******************************************************************************
+# CONSTRUCT THE PLOT
+#******************************************************************************
+
+ggplot() +
+  
+  # plot background map
+  geom_sf(data = england, colour = "grey95", fill = "grey95") +
+  
+  # plot simulated locations of the applications
+  geom_sf(data = buildings, size = 1, alpha = 0.2) +
+  
+  # use minimal MAP theme to remove visual clutter
+  theme_map() +
+  
+  # set coordinate system
+  coord_sf()
+
+#******************************************************************************
+# COLOURING OF THIS PLOT AND ASSEMBLY OF THE INFOGRAPHIC
+# COMPLETED IN AFFINITY DESIGNER
+#******************************************************************************
+```
+
