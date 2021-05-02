@@ -17,7 +17,7 @@ library(rnaturalearthdata)
 library(ggthemes)
 ```
 
-Exact location of each 
+Exact location of where each point is plotted with each Local Authority varies slightly each time the code is run. This is because the locations allocated to each application within each Local Authority are sampled at random using `st_sample`. 
 
 ```{r}
 #******************************************************************************
@@ -38,16 +38,24 @@ boundaries_lat_long <- st_read("boundaries_2019/Counties_and_Unitary_Authorities
 # merge LA boundaries and BSF application counts
 bsd_geo <- merge(boundaries_lat_long,
                  # rename variable to so there is a shared key between the two
-                 # datsets
+                 # datasets
                  la_data %>% 
                    rename(ctyua19nm = `Local Authority`)
 ) %>% 
-  arrange(Count)  
+  arrange(Count) %>% 
+  
+  # include to check that for a single Local Authority points are approx.
+  # within boundaries of the Local Authority
+  # filter(ctyua19nm == "Brighton and Hove") %>% 
+  {.}
 
 # confirm number of local authorities in merged  dataset
-# there should be 80 features 
+# there should be 80 features / 80 unique Local Authority names 
 # (rather than 81 as the total in la_data won't match a geometry in the LA boundaries dataset)
-bsd_geo
+bsd_geo %>%
+  select(ctyua19nm) %>%
+  as_tibble() %>% 
+  distinct(ctyua19nm)
 
 # confirm that data for key variables is complete
 bsd_geo %>% 
@@ -83,12 +91,16 @@ buildings # there should be 2760 features in the output
 ggplot() +
   
   # plot background map
-  geom_sf(data = england, colour = "grey95", fill = "grey95") +
+  geom_sf(data = england, colour = "grey90", fill = "grey90") +
+  
+  # option to superimpose LA boundaries to visually check that points create fall
+  # with boundaries
+  #geom_sf(data = boundaries_lat_long) +
   
   # plot simulated locations of the applications
   geom_sf(data = buildings, size = 1, alpha = 0.2) +
   
-  # use minimal MAP theme to remove visual clutter
+  # use minimal map theme to remove visual clutter
   theme_map() +
   
   # set coordinate system
@@ -98,5 +110,6 @@ ggplot() +
 # COLOURING OF THIS PLOT AND ASSEMBLY OF THE INFOGRAPHIC
 # COMPLETED IN AFFINITY DESIGNER
 #******************************************************************************
+ggsave("out.svg")
 ```
 
