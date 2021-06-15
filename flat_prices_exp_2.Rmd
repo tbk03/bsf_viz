@@ -1,0 +1,252 @@
+---
+title: "Flat price exploratory 2"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(glue)
+library(lubridate)
+
+theme_set(theme_light())
+```
+
+## Read in data
+```{r}
+# *****************************************************************************
+# read in transaction data for existing flats (this excludes new build flats)
+# *****************************************************************************
+
+exist_flat_trans <- readxl::read_xls("data/HPSSA Dataset 1 - Number of residential property sales by MSOA/HPSSA Dataset 1 - Number of residential property sales by MSOA.xls", sheet = "3e", skip = 5) %>% 
+  
+  # make naming of variables more consistent
+  clean_names() %>% 
+  
+  # remove erroneous column created when reading xls file
+  select(-x105)
+
+# *****************************************************************************
+# read in transaction data for all property types (this includes existing flats)
+# *****************************************************************************
+
+all_housing_trans <-  readxl::read_xls("data/HPSSA Dataset 1 - Number of residential property sales by MSOA/HPSSA Dataset 1 - Number of residential property sales by MSOA.xls", sheet = "1a", skip = 5) %>% 
+  
+  # make naming of variables more consistent
+  clean_names() %>% 
+  
+  # remove erroneous column created when reading xls file
+  select(-x105)
+```
+## Process data
+
+The BSF data is for England only. So, I am only going to want to look at house transactions for England too.
+
+```{r}
+# *****************************************************************************
+# focus down on England data only
+# *****************************************************************************
+
+# for existing flats data
+exist_flat_trans_eng <- exist_flat_trans %>% 
+  filter(str_detect(local_authority_code, "^E")) 
+
+# for all properties data
+all_housing_trans_eng <- all_housing_trans %>% 
+  filter(str_detect(local_authority_code, "^E")) 
+```
+
+
+## Tidy data
+
+```{r}
+# *****************************************************************************
+# tidy the data ahead of analysis
+# *****************************************************************************
+
+#' A function to tidy data read in from an individual sheet within the .xls spreadsheet:
+#' "HPSSA Dataset 1 - Number of residential property sales by MSOA.xls"
+#'
+#' @param df: a dataframe
+#' @param df: a string to identify the type of transactions counted 
+#'
+#' @return: a tidied tibble of the data
+
+tidy_housing_trans_data <- function(df, trans_col_name){
+  
+  # tidy data
+  df %>% 
+    
+    # deal with column names that are actually values of a variable (year_ending)
+    pivot_longer(cols = year_ending_dec_1995:year_ending_sep_2020, 
+                 names_to = "year_ending", 
+                 values_to = trans_col_name) %>% 
+    
+    # process year_ending strings to create a date column
+    mutate(date = str_replace(year_ending, "year_ending_", "")) %>% 
+    separate(date, into = c("month", "year"), sep = "_") %>% 
+    mutate(date = lubridate::my(glue("{month} {year}"))) %>% 
+    
+    # remove variables that are no longer needed
+    select(-month, -year, -year_ending)
+  
+}
+
+# tidy both the flat and all housing datasets
+exist_flat_tidy <- tidy_housing_trans_data(exist_flat_trans_eng, "num_trans_ex_flats")
+all_housing_tidy <- tidy_housing_trans_data(all_housing_trans_eng, "num_trans_all_housing")
+
+# *****************************************************************************
+# join the datasets for different transactions types analysis
+# *****************************************************************************
+transactions <- all_housing_tidy %>% 
+  left_join(exist_flat_tidy) %>% 
+  relocate(date, .before = msoa_code)
+```
+
+## Focus down on data of interest
+
+Data reported for the year ending June 2017 is the last set of observations where it is improbable that the Grenfell Tower Fire could have had major impacts on transaction numbers.
+
+```{r}
+trans_focus <- transactions %>% 
+  # remove data from prior to the Grenfell Fire
+  filter(date >= lubridate::my("Jun 2016")) %>% 
+  
+  # create a new variable to allow comparison of existing flats with the rest of
+  # the market
+  mutate(num_trans_not_ex_flats = num_trans_all_housing - num_trans_ex_flats)
+```
+
+## Create the additional variables needed for plotting and analysis
+```{r}
+trans_init_plot <- trans_focus %>% 
+  
+  # the data needs tidying again after joining
+  pivot_longer(cols = starts_with("num_trans"),
+               names_to = "trans_type",
+               values_to = "num_trans") %>% 
+  
+  # remove unnecessary text within newly created column
+  mutate(trans_type = str_replace(trans_type, "num_trans_", "")) %>% 
+  
+  # calculate transaction counts for England as a whole
+  group_by(date, trans_type) %>% 
+  summarise(num_trans = sum(num_trans))
+  
+  
+  
+```
+
+## Initial plotting
+
+```{r}
+ggplot(trans_init_plot, aes(date, num_trans,
+                            colour = trans_type)) +
+  geom_point() +
+  geom_line() +
+
+  expand_limits(y = 0) +
+  
+  labs(title = "Existing flats make up a small proportion of over housing transactions",
+       subtitle = "So it is difficult to compare trends in transaction numbers ...")
+  
+```
+So, I look at percentage change in transactions numbers after Grenfell. Using the year ending June 2017 transaction numbers as a baseline.
+
+```{r}
+# ****************************************************************
+# calculate the baseline against which percent change can be measured
+# ****************************************************************
+baseline_date <- lubridate::date("2016-06-01")
+
+baseline_trans_nums <- trans_init_plot %>% 
+  filter(date == baseline_date)
+
+bl_all_housing <- baseline_trans_nums[[1,3]]
+bl_ex_flats <- baseline_trans_nums[[2,3]]
+bl_not_ex_flats <- baseline_trans_nums[[3,3]]
+
+# prepare percent change data for plotting
+pc_plot_df <-  trans_init_plot %>%
+  
+  # data needs to be wide for percent change calculation
+  pivot_wider(names_from = trans_type, values_from = num_trans) %>% 
+  
+  # calculate percentage change
+  mutate(pc_all_housing = ((all_housing - bl_all_housing) / bl_all_housing) * 100,
+         pc_ex_flats = ((ex_flats - bl_ex_flats) / bl_ex_flats) * 100,
+         pc_not_ex_flats = ((not_ex_flats - bl_not_ex_flats) / bl_not_ex_flats) * 100) %>% 
+  
+  # (re-)tidy data for plotting
+  pivot_longer(cols = starts_with("pc"), 
+               names_to = "trans_type", 
+               values_to = "percent_change") %>%
+  
+  # remove unnecessary text from entries in trans_type column
+  mutate(trans_type = str_replace(trans_type, "pc_", "")) %>% 
+  
+  # remove unnecessary columns
+  select(-all_housing, -ex_flats, -not_ex_flats)
+```
+
+```{r}
+ggplot(pc_plot_df, aes(date, percent_change,
+                       colour = trans_type)) +
+  geom_vline(xintercept = lubridate::date("2017-06-14")) +
+  geom_point() +
+  geom_line() +
+  annotate("text", x = lubridate::date("2017-06-14"), y = -40,
+           label = "Grenfell tower fire", hjust = -0.05) +
+  labs(title = "By Sept 2020 the number of exisiting flats per year has reduced over 45%\nsince June 2016",
+       subtitle = "The number of existing flat sales per year was already falling before the\nGrenfell Tower fire")
+```
+
+## Looking a percent change in number of flat sales at the local authority scale
+
+```{r}
+la_trans <- trans_focus %>% 
+  
+  # calculate local authority totals for transaction count type
+  group_by(date, local_authority_name, local_authority_code) %>% 
+  summarise(num_trans_all_housing = sum(num_trans_all_housing),
+            num_trans_ex_flats = sum(num_trans_ex_flats),
+            num_trans_not_ex_flats = sum(num_trans_not_ex_flats)) %>%
+  ungroup() %>% 
+  
+    # the data needs tidying again after calculating local authority totals
+  pivot_longer(cols = starts_with("num_trans"),
+               names_to = "trans_type",
+               values_to = "num_trans") %>% 
+  
+  # remove unnecessary text within newly created column
+  mutate(trans_type = str_replace(trans_type, "num_trans_", "")) 
+  
+
+baseline_date <- lubridate::date("2017-06-01")
+
+la_baseline_trans_nums <- la_trans %>% 
+  filter(date == baseline_date) %>% 
+  rename(baseline_num_trans = num_trans) %>% 
+  select(-date)
+
+la_pc <- la_trans %>% 
+  left_join(la_baseline_trans_nums) %>% 
+  mutate(pc = ((num_trans - baseline_num_trans)/ baseline_num_trans),
+         change_in_trans = num_trans - baseline_num_trans) %>% 
+  
+  filter(date == date("2020-06-01") & trans_type == "ex_flats" & baseline_num_trans > 100) %>% 
+  arrange(change_in_trans)
+
+View(la_pc)
+
+
+
+
+
+```
+
+```{r}
+
+```
+

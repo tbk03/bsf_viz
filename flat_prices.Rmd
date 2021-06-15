@@ -1,0 +1,152 @@
+---
+title: "Flat Prices"
+output: html_notebook
+---
+
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(glue)
+
+theme_set(theme_light())
+```
+
+```{r}
+flat_transactions <- readxl::read_xls("data/HPSSA Dataset 1 - Number of residential property sales by MSOA/HPSSA Dataset 1 - Number of residential property sales by MSOA.xls", sheet = "1e", skip = 5) %>% 
+  clean_names() %>% 
+  
+  # remove erroneous column created when reading xls file
+  select(-x105)
+
+leeds_flats <- flat_transactions %>% 
+  filter(local_authority_name == "Leeds") %>% 
+  pivot_longer(cols = year_ending_dec_1995:year_ending_sep_2020, 
+               names_to = "date", 
+               values_to = "num_transactions") %>% 
+  mutate(date = str_replace(date, "year_ending_", "")) %>% 
+  separate(date, into = c("month", "year"), sep = "_") %>% 
+  mutate(date = lubridate::my(glue("{month} {year}")))
+
+leeds_flats_plotting <- leeds_flats %>% 
+  filter(date >= lubridate::my("jan 2017")) %>% 
+  group_by(msoa_code) %>% 
+  mutate(ave_num_transactions = mean(num_transactions),
+         is_high_num_transactions = ave_num_transactions > 100) %>% 
+  ungroup()
+
+ggplot(leeds_flats_plotting, 
+       aes(date, num_transactions, 
+           group = msoa_name,
+           colour = is_high_num_transactions)) +
+  geom_line() +
+  geom_label(data = leeds_flats_plotting %>% 
+                      filter(date == max(date) &
+                               is_high_num_transactions == TRUE),
+             mapping = aes(label = msoa_name),
+             nudge_x = 200) +
+  theme_minimal()
+
+leeds_flats_plotting %>% 
+  filter(is_high_num_transactions) %>% 
+  distinct(msoa_name)
+```
+```{r}
+leeds_flats_plotting %>% 
+  group_by(date, is_high_num_transactions) %>% 
+  summarise(leeds_num_transactions = sum(num_transactions)) %>% 
+  
+  ggplot(mapping = aes(date, leeds_num_transactions, colour = is_high_num_transactions)) +
+  geom_line()
+```
+```{r}
+p <- leeds_flats_plotting %>% 
+  filter(msoa_name == "Leeds 111") %>% 
+  
+  ggplot(mapping = aes(date, num_transactions)) +
+  geom_point() +
+  geom_line() +
+  labs(title = "Leeds City Centre")
+
+plotly::ggplotly(p)
+```
+
+
+```{r}
+all_housing_transactions <-  readxl::read_xls("data/HPSSA Dataset 1 - Number of residential property sales by MSOA/HPSSA Dataset 1 - Number of residential property sales by MSOA.xls", sheet = "1a", skip = 5) %>% 
+  clean_names() %>% 
+  
+  # remove erroneous column created when reading xls file
+  select(-x105)
+
+leeds_all <- all_housing_transactions %>% 
+  filter(local_authority_name == "Leeds") %>% 
+  pivot_longer(cols = year_ending_dec_1995:year_ending_sep_2020, 
+               names_to = "date", 
+               values_to = "num_transactions") %>% 
+  mutate(date = str_replace(date, "year_ending_", "")) %>% 
+  separate(date, into = c("month", "year"), sep = "_") %>% 
+  mutate(date = lubridate::my(glue("{month} {year}")))
+
+leeds_flats_focus <- leeds_flats %>% 
+  select(msoa_code, msoa_name, date,
+         num_flats_trans = num_transactions)
+
+leeds_all_focus <- leeds_all %>% 
+  select(msoa_code, msoa_name, date,
+         num_all_trans = num_transactions)
+  
+leeds_all_plotting <- leeds_all_focus %>% 
+  left_join(leeds_flats_focus) %>% 
+  mutate(num_non_flats_trans = num_all_trans - num_flats_trans) %>% 
+  pivot_longer(num_all_trans:num_non_flats_trans, names_to = "trans_type", values_to = "num_trans")
+
+leeds_all_plotting %>% 
+  filter(date >= lubridate::my("jan 2017")) %>%
+  group_by(date, trans_type) %>% 
+  summarise(leeds_num_transactions = sum(num_trans)) %>% 
+  
+  ggplot(mapping = aes(date, leeds_num_transactions, colour = trans_type)) +
+  geom_line()
+```
+
+```{r}
+closest_pre_gren <- leeds_all_plotting$date == lubridate::my("jun 2017")
+pre_gren_flats_trans <- leeds_all_plotting[closest_pre_gren, 'num_trans']
+
+pre_grenf_trans <- leeds_all_plotting %>% 
+  filter(date == lubridate::my("jun 2017")) %>% 
+  group_by(trans_type) %>% 
+  summarise(num_trans = sum(num_trans))
+
+pre_grenf_trans
+
+pre_gref_all <- pre_grenf_trans[[1,2]]
+pre_gref_flats <- pre_grenf_trans[[2,2]]
+pre_gref_non_flats <- pre_grenf_trans[[3,2]]
+
+p1 <- leeds_all_plotting %>% 
+  group_by(date, trans_type) %>%
+  summarise(num_trans = sum(num_trans)) %>% 
+  pivot_wider(names_from = trans_type, values_from = num_trans) %>%
+  mutate(pc_all = ((num_all_trans - pre_gref_all)/ pre_gref_all) * 100,
+         pc_flats = ((num_flats_trans - pre_gref_flats)/ pre_gref_flats) * 100,
+         pc_non_flats = ((num_non_flats_trans - pre_gref_non_flats) / pre_gref_non_flats) * 100
+         ) %>% 
+  filter(date >= lubridate::my("may 2017")) %>% 
+  
+  pivot_longer(cols = pc_all:pc_non_flats, 
+               names_to = "trans_type",
+               values_to = "pc_in_trans") %>% 
+  
+  ggplot(aes(date, pc_in_trans, colour = trans_type)) +
+  geom_point() +
+  geom_line()
+  
+plotly::ggplotly(p1)   
+```
+
+```{r}
+
+```
+

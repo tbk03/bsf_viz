@@ -1,6 +1,6 @@
 ---
 title: "Attempting to map the extent of the Building Safety Crisis"
-author: "Chris J. Martin (Analytics:Urban)"
+author: "Dr. Chris Martin (Analytics:Urban)"
 date: "03/05/2021"
 output: html_document
 ---
@@ -9,13 +9,13 @@ output: html_document
 
 ***In the interests of full disclosure:** I have been, and continue to be, personally affected by the cladding and building safety crisis.*
 
-&nbsp;
+ 
 
 Last week I put together an infographic (shown above) which I hoped would help with the campaigns for a comprehensive Government intervention to resolve the cladding and building safety crisis. The map within the infographic was picked up by BBC News, and was shown very briefly in the background of a feature on the News at Ten (Thursday 29th April).
 
 This media coverage was a success in a very narrow personal sense, and obviously took place in the context of huge disappointment for the cladding/building safety campaign with the Fire Safety Bill passing parliament without financial protection for leaseholder. But, in this context I did want to document this small success. In particular, I wanted to document what my objectives were with the map visualisation, and also outline the limitations of the data plotted on the map. Primarily, this is for my own portfolio, but also just in case it is of interest to anyone else working on mapping the building safety crisis.
 
-&nbsp;
+ 
 
 ## Objectives
 
@@ -27,7 +27,7 @@ The primary intended audience of the infographic was people involved in the clad
 
 -   To highlight that many of the applications to the Government's Building Safety Fund are from large cities (London, Manchester, Birmingham etc.).
 
-&nbsp;
+ 
 
 ## Limitations of the data available
 
@@ -37,17 +37,12 @@ Some data is available from Government which includes [the number of application
 
 The data itself is very simple. Just a list of local authorities and count of the number of applications made to the Building Safety Fund from which each local authority.
 
-+---------------------------------------------------+------------------+
-| **Local Authority**                               | **Count**        |
-+===================================================+==================+
-| Barking and Dagenham                              | 24               |
-+---------------------------------------------------+------------------+
-| Barnet                                            | 37               |
-+---------------------------------------------------+------------------+
-| ...                                               | ...              |
-+---------------------------------------------------+------------------+
-| Worcestershire                                    | 8                |
-+---------------------------------------------------+------------------+
+| **Local Authority**  | **Count** |
+|----------------------|-----------|
+| Barking and Dagenham | 24        |
+| Barnet               | 37        |
+| ...                  | ...       |
+| Worcestershire       | 8         |
 
 Given the data I was working, the map itself has the following main limitations.
 
@@ -61,7 +56,7 @@ Given the data I was working, the map itself has the following main limitations.
 
 -   The exact location where each point is plotted with each Local Authority varies each time the code is run. This is because the locations allocated to each application within each Local Authority are sampled at random.
 
-&nbsp;
+ 
 
 ## Reflections
 
@@ -77,7 +72,7 @@ Given the data I was working, the map itself has the following main limitations.
 
 -   In retrospect I could have spent more time on the refining/simplifying the colour palette used in the infographic and the approach to labeling of the cities with the most BSF applications.
 
-&nbsp;
+ 
 
 ## Code
 
