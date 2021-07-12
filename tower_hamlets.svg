@@ -1,0 +1,97 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' class='svglite' width='504.00pt' height='302.25pt' viewBox='0 0 504.00 302.25'>
+<defs>
+  <style>
+    line {
+      fill: none;
+      stroke: #000000;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-miterlimit: 10.00;
+    }
+    polyline {
+      fill: none;
+      stroke: #000000;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-miterlimit: 10.00;
+    }
+    path {
+      fill: none;
+      stroke: #000000;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-miterlimit: 10.00;
+    }
+    rect {
+      fill: none;
+      stroke: #000000;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-miterlimit: 10.00;
+    }
+    circle {
+      fill: none;
+      stroke: #000000;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-miterlimit: 10.00;
+    }
+  </style>
+</defs>
+<rect width='100%' height='100%' style='stroke: none; fill: none;'/>
+<defs>
+  <clipPath id='cpMC4wMHw1MDQuMDB8MC4wMHwzMDIuMjU='>
+    <rect x='0.00' y='0.00' width='504.00' height='302.25' />
+  </clipPath>
+</defs>
+<g clip-path='url(#cpMC4wMHw1MDQuMDB8MC4wMHwzMDIuMjU=)'>
+</g>
+<defs>
+  <clipPath id='cpMzIuNjd8NDk4LjUyfDU5LjA2fDI2My42Ng=='>
+    <rect x='32.67' y='59.06' width='465.85' height='204.61' />
+  </clipPath>
+</defs>
+<g clip-path='url(#cpMzIuNjd8NDk4LjUyfDU5LjA2fDI2My42Ng==)'>
+<polyline points='32.67,254.36 498.52,254.36 ' style='stroke-width: 1.07; stroke: #BEBEBE; stroke-linecap: butt;' />
+<polyline points='32.67,211.74 498.52,211.74 ' style='stroke-width: 1.07; stroke: #BEBEBE; stroke-linecap: butt;' />
+<polyline points='32.67,169.12 498.52,169.12 ' style='stroke-width: 1.07; stroke: #BEBEBE; stroke-linecap: butt;' />
+<polyline points='32.67,126.49 498.52,126.49 ' style='stroke-width: 1.07; stroke: #BEBEBE; stroke-linecap: butt;' />
+<polyline points='32.67,83.87 498.52,83.87 ' style='stroke-width: 1.07; stroke: #BEBEBE; stroke-linecap: butt;' />
+<line x1='57.26' y1='263.66' x2='57.26' y2='59.06' style='stroke-width: 2.13; stroke: #CCCCCC; stroke-linecap: butt;' />
+<line x1='356.31' y1='263.66' x2='356.31' y2='59.06' style='stroke-width: 2.13; stroke: #CCCCCC; stroke-linecap: butt;' />
+<text x='66.46' y='130.44' style='font-size: 11.04px; font-family: Lato;' textLength='91.94px' lengthAdjust='spacingAndGlyphs'>Grenfell Tower fire</text>
+<text x='364.81' y='130.44' style='font-size: 11.04px; font-family: Lato;' textLength='85.06px' lengthAdjust='spacingAndGlyphs'>EWS1 introduced</text>
+<polygon points='32.67,68.36 62.91,73.56 93.48,92.05 124.05,106.38 153.95,122.61 184.19,133.27 214.76,125.30 245.33,119.72 275.23,115.84 305.47,114.60 336.04,111.19 366.61,118.31 396.84,115.58 427.08,127.56 457.65,146.95 488.22,150.28 488.22,158.63 457.65,153.98 427.08,134.89 396.84,123.38 366.61,125.90 336.04,118.99 305.47,122.15 275.23,123.77 245.33,128.16 214.76,133.31 184.19,141.07 153.95,130.84 124.05,114.09 93.48,100.02 62.91,81.91 32.67,76.24 ' style='stroke-width: 0.00; stroke: none; fill: #CCCCCC; fill-opacity: 0.50;' />
+<polyline points='32.67,68.36 62.91,73.56 93.48,92.05 124.05,106.38 153.95,122.61 184.19,133.27 214.76,125.30 245.33,119.72 275.23,115.84 305.47,114.60 336.04,111.19 366.61,118.31 396.84,115.58 427.08,127.56 457.65,146.95 488.22,150.28 ' style='stroke-width: 1.07; stroke: none;' />
+<polygon points='32.67,76.24 62.91,81.91 93.48,100.02 124.05,114.09 153.95,130.84 184.19,141.07 214.76,133.31 245.33,128.16 275.23,123.77 305.47,122.15 336.04,118.99 366.61,125.90 396.84,123.38 427.08,134.89 457.65,153.98 488.22,158.63 488.22,204.19 457.65,205.86 427.08,198.01 396.84,191.41 366.61,190.26 336.04,184.97 305.47,184.67 275.23,182.58 245.33,180.88 214.76,180.84 184.19,177.55 153.95,174.57 124.05,172.23 93.48,173.38 62.91,176.28 32.67,177.77 ' style='stroke-width: 0.00; stroke: none; fill: #82C2FF; fill-opacity: 0.50;' />
+<polyline points='32.67,76.24 62.91,81.91 93.48,100.02 124.05,114.09 153.95,130.84 184.19,141.07 214.76,133.31 245.33,128.16 275.23,123.77 305.47,122.15 336.04,118.99 366.61,125.90 396.84,123.38 427.08,134.89 457.65,153.98 488.22,158.63 ' style='stroke-width: 1.07; stroke: none;' />
+<polygon points='32.67,177.77 62.91,176.28 93.48,173.38 124.05,172.23 153.95,174.57 184.19,177.55 214.76,180.84 245.33,180.88 275.23,182.58 305.47,184.67 336.04,184.97 366.61,190.26 396.84,191.41 427.08,198.01 457.65,205.86 488.22,204.19 488.22,254.36 457.65,254.36 427.08,254.36 396.84,254.36 366.61,254.36 336.04,254.36 305.47,254.36 275.23,254.36 245.33,254.36 214.76,254.36 184.19,254.36 153.95,254.36 124.05,254.36 93.48,254.36 62.91,254.36 32.67,254.36 ' style='stroke-width: 0.00; stroke: none; fill: #458CFF;' />
+<polyline points='32.67,177.77 62.91,176.28 93.48,173.38 124.05,172.23 153.95,174.57 184.19,177.55 214.76,180.84 245.33,180.88 275.23,182.58 305.47,184.67 336.04,184.97 366.61,190.26 396.84,191.41 427.08,198.01 457.65,205.86 488.22,204.19 ' style='stroke-width: 1.07; stroke: none;' />
+</g>
+<g clip-path='url(#cpMC4wMHw1MDQuMDB8MC4wMHwzMDIuMjU=)'>
+<text x='27.74' y='257.79' text-anchor='end' style='font-size: 9.60px; fill: #4D4D4D; font-family: Lato;' textLength='5.57px' lengthAdjust='spacingAndGlyphs'>0</text>
+<text x='27.74' y='215.17' text-anchor='end' style='font-size: 9.60px; fill: #4D4D4D; font-family: Lato;' textLength='22.26px' lengthAdjust='spacingAndGlyphs'>1000</text>
+<text x='27.74' y='172.55' text-anchor='end' style='font-size: 9.60px; fill: #4D4D4D; font-family: Lato;' textLength='22.26px' lengthAdjust='spacingAndGlyphs'>2000</text>
+<text x='27.74' y='129.93' text-anchor='end' style='font-size: 9.60px; fill: #4D4D4D; font-family: Lato;' textLength='22.26px' lengthAdjust='spacingAndGlyphs'>3000</text>
+<text x='27.74' y='87.30' text-anchor='end' style='font-size: 9.60px; fill: #4D4D4D; font-family: Lato;' textLength='22.26px' lengthAdjust='spacingAndGlyphs'>4000</text>
+<polyline points='124.05,266.40 124.05,263.66 ' style='stroke-width: 2.13; stroke: #BEBEBE; stroke-linecap: butt;' />
+<polyline points='245.33,266.40 245.33,263.66 ' style='stroke-width: 2.13; stroke: #BEBEBE; stroke-linecap: butt;' />
+<polyline points='366.61,266.40 366.61,263.66 ' style='stroke-width: 2.13; stroke: #BEBEBE; stroke-linecap: butt;' />
+<polyline points='488.22,266.40 488.22,263.66 ' style='stroke-width: 2.13; stroke: #BEBEBE; stroke-linecap: butt;' />
+<text x='124.05' y='275.14' text-anchor='middle' style='font-size: 9.60px; fill: #4D4D4D; font-family: Lato;' textLength='22.26px' lengthAdjust='spacingAndGlyphs'>2018</text>
+<text x='245.33' y='275.14' text-anchor='middle' style='font-size: 9.60px; fill: #4D4D4D; font-family: Lato;' textLength='22.26px' lengthAdjust='spacingAndGlyphs'>2019</text>
+<text x='366.61' y='275.14' text-anchor='middle' style='font-size: 9.60px; fill: #4D4D4D; font-family: Lato;' textLength='22.26px' lengthAdjust='spacingAndGlyphs'>2020</text>
+<text x='488.22' y='275.14' text-anchor='middle' style='font-size: 9.60px; fill: #4D4D4D; font-family: Lato;' textLength='22.26px' lengthAdjust='spacingAndGlyphs'>2021</text>
+<rect x='170.69' y='25.34' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
+<rect x='171.40' y='26.05' width='15.86' height='15.86' style='stroke-width: 1.07; stroke: none; stroke-linecap: square; stroke-linejoin: miter; fill: #CCCCCC; fill-opacity: 0.50;' />
+<rect x='224.04' y='25.34' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
+<rect x='224.75' y='26.05' width='15.86' height='15.86' style='stroke-width: 1.07; stroke: none; stroke-linecap: square; stroke-linejoin: miter; fill: #82C2FF; fill-opacity: 0.50;' />
+<rect x='290.41' y='25.34' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
+<rect x='291.12' y='26.05' width='15.86' height='15.86' style='stroke-width: 1.07; stroke: none; stroke-linecap: square; stroke-linejoin: miter; fill: #458CFF;' />
+<text x='193.94' y='37.56' style='font-size: 10.00px; font-family: Lato;' textLength='24.12px' lengthAdjust='spacingAndGlyphs'>other</text>
+<text x='247.30' y='37.56' style='font-size: 10.00px; font-family: Lato;' textLength='37.13px' lengthAdjust='spacingAndGlyphs'>new_flat</text>
+<text x='313.67' y='37.56' style='font-size: 10.00px; font-family: Lato;' textLength='52.82px' lengthAdjust='spacingAndGlyphs'>existing_flat</text>
+<text x='32.67' y='18.40' style='font-size: 16.00px; font-family: Lato;' textLength='266.76px' lengthAdjust='spacingAndGlyphs'>Annual property sales: Tower Hamlets</text>
+</g>
+</svg>

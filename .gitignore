@@ -30,3 +30,5 @@ vignettes/*.pdf
 *.ods
 
 /boundaries_2019/
+*.xls
+*.xlsx

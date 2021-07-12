@@ -1,0 +1,367 @@
+---
+title: "Number of flat sales plots"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(ggstream)
+library(glue)
+library(lubridate)
+library(scales)
+
+theme_set(theme_bw())
+```
+
+
+```{r}
+# store file locations in variable as they are long strings
+n_sales_loc <- "data/hpssadataset7numberofresidentialpropertysalesforadministrativegeographiesnewlybuiltdwellings.xls"
+e_sales_loc <- "data/hpssadataset8numberofresidentialpropertysalesforadministrativegeographiesexistingdwellings.xls"
+
+# convenience function for simplifying code for reading in data from different sheets
+read_sales_data <- function(file_loc, sheet_id){
+  read_xls(file_loc, sheet = sheet_id, skip = 4)
+}
+
+# read in the data from the two spreadsheets 
+# (one for new property sales and one for existing property sales)
+# different property types (detached, flat ...) are on different sheets
+sales <- tribble(
+  ~sale_type, ~property_type, ~data,
+  "existing", "detached", read_sales_data(e_sales_loc, "2b"),
+  "existing", "semi-detached", read_sales_data(e_sales_loc,  "2c"),
+  "existing", "terraced", read_sales_data(e_sales_loc, "2d"),
+  "existing", "flat", read_sales_data(e_sales_loc, "2e"),
+  "new", "detached", read_sales_data(n_sales_loc, "2b"),
+  "new", "semi-detached", read_sales_data(n_sales_loc, "2c"),
+  "new", "terraced", read_sales_data(n_sales_loc, "2d"),
+  "new", "flat", read_sales_data(n_sales_loc, "2e")
+) %>% 
+  unnest(data)
+
+# output dataframe for inspection
+sales
+
+```
+
+```{r}
+# clean data
+sales_clean <- sales %>% 
+  janitor::clean_names()
+
+visdat::vis_miss(sales_clean)
+
+# tidy data
+# in the spreadsheets each year's data appears in a separate column
+sales_tidy <- sales_clean %>% 
+  pivot_longer(cols = year_ending_dec_1995:last_col(), 
+               names_to = "date", 
+               values_to = "num_transactions") %>% 
+  mutate(date = str_replace(date, "year_ending_", "")) %>% 
+  separate(date, into = c("month", "year"), sep = "_") %>% 
+  mutate(date = my(glue("{month} {year}")),
+         year_preceding = ceiling_date(date, unit = 'month')) %>% 
+  select(-month, -year)
+
+sales_tidy
+```
+
+```{r}
+sales_plot <- sales_tidy %>% 
+  group_by(date, local_authority_name) %>% 
+  mutate(freq = num_transactions / sum(num_transactions)) %>% 
+  ungroup() %>% 
+  
+  # code to confirm frequencies have been calculated correctly
+  # summarise(tot_freq = sum(freq)) %>% 
+  # ungroup() %>% 
+  # distinct(tot_freq)
+  
+  unite(col = "sales_property_type",
+        sale_type, property_type)
+
+sales_plot
+```
+
+```{r}
+
+sales_plot %>% 
+  filter(local_authority_name == "Manchester" &
+          year_preceding > my("05-2015") ) %>% 
+  ggplot() +
+  geom_area(aes(year_preceding, num_transactions,
+                fill = sales_property_type))
+  # geom_stream(aes(year_preceding, num_transactions,
+  #               fill = sales_property_type))
+```
+## National picture
+```{r}
+sales_prop_type_order <- c("existing_detached", "new_detached",
+                         "existing_semi-detached", "new_semi-detached",
+                         "existing_terraced", "new_terraced",
+                         "new_flat", "existing_flat")
+
+sales_tidy %>% 
+  
+  # calculate national totals
+  group_by(date, year_preceding, sale_type, property_type) %>% 
+  summarise(tot_transactions = sum(num_transactions)) %>% 
+  ungroup() %>% 
+  
+  # calculate frequencies 
+  group_by(date) %>% 
+  mutate(freq = tot_transactions / sum(tot_transactions)) %>%
+  
+  # create a single property-type transaction variable
+  unite(col = "sales_property_type",
+        sale_type, property_type) %>% 
+  
+  # re-ordering of the stacking of the fills
+  mutate(sales_property_type = fct_relevel(sales_property_type,
+                                           sales_prop_type_order)) %>% 
+  
+  mutate(is_flat = str_detect(sales_property_type, "flat"),
+         fill_types = case_when(
+           is_flat == FALSE ~ "other",
+           str_detect(sales_property_type, "new") ~ "new",
+           str_detect(sales_property_type, "existing") ~ "existing",
+           TRUE ~ "NA"
+         )
+           
+         ) %>% 
+  
+  filter(year_preceding > my("05-2015")) %>% 
+  ggplot() +
+  geom_area(aes(year_preceding, tot_transactions,
+                group = sales_property_type,
+                fill = fill_types))
+
+```
+
+```{r}
+# identify the top n local authorities by number of applications to the BSF
+top_las_bsf <- read_csv("MHCLG_BSF_and_ACM_BSF_by_Local_Authority.csv",
+         skip = 1) %>% 
+  janitor::clean_names() %>% 
+  na.omit() %>% 
+  slice_max(order_by = count, n = 25) %>% 
+  select(local_authority) %>% 
+  unlist()
+
+top_las_bsf
+```
+```{r}
+sysfonts::font_add_google("Lato", "Lato")
+
+explanatory_theme_2 <- function(){
+  
+  
+  grid_line_colour <- "grey"
+  text_colour <- "black"
+  background_colour <- "grey98"
+  
+  
+  ggplot2::theme_bw() %+replace%
+  
+  ggplot2::theme(
+    
+    # format text
+    text = ggplot2::element_text(family = "Lato", size = 12),
+    plot.title = ggplot2::element_text(hjust = 0,size = 16),
+    plot.subtitle = ggplot2::element_text(hjust = 0, size = 12),
+    plot.caption = ggplot2::element_text(size = 8, 
+                                         hjust = 0),
+    
+    # format legend
+    legend.position = "top",
+    legend.background = ggplot2::element_blank(),
+    legend.title = ggplot2::element_blank(),
+    legend.text = ggplot2::element_text(size = 10),
+    
+    # format axis
+    #axis.text = ggplot2::element_text(face = "bold"),
+    axis.title.x = ggplot2::element_text(),
+    axis.title.y = ggplot2::element_blank(),
+    axis.line.y = ggplot2::element_blank(),
+    axis.line.x = ggplot2::element_blank(),
+    # axis.line.x = ggplot2::element_line(colour = "black", size = 1),
+    axis.ticks.x = ggplot2::element_line(colour = grid_line_colour, size = 1),
+    axis.ticks = ggplot2::element_blank(),
+    axis.text.x = ggplot2::element_text(margin=ggplot2::margin(t = 1, b = 10)),
+    
+    # format plot gridlines
+    panel.grid.minor = ggplot2::element_blank(),
+    panel.grid.major.x = ggplot2::element_blank(),
+    panel.grid.major.y = ggplot2::element_line(colour = grid_line_colour),
+    
+    # format plot background
+    panel.background = ggplot2::element_blank(),
+    
+    # format overall background (i.e. background behind the entire figure
+    # including the plot, titles etc.)
+    plot.background = ggplot2::element_blank(),
+    
+    # facet labels background
+    strip.background = ggplot2::element_rect(fill=background_colour),
+    strip.text = ggplot2::element_text(colour = text_colour, face = "bold",
+                                       size = 12),
+    panel.border = ggplot2::element_blank()
+  )
+}
+```
+
+
+```{r}
+la_name <- "Newham"
+
+# simplify plotting data - so just three catergories of property type are consider:
+# (1) existing flats, (2) new flats and (3) all other property types.
+sales_plot_simplified <- sales_plot %>% 
+  filter(local_authority_name == la_name & #top_las_bsf &
+          year_preceding > my("02-2017") ) %>% 
+  
+  mutate(sales_prop_type_simple = case_when(
+    !str_detect(sales_property_type, "flat") ~ "other",
+    TRUE ~ sales_property_type
+  )) %>% 
+  
+  group_by(year_preceding, local_authority_name, sales_prop_type_simple) %>% 
+  summarise(num_transactions = sum(num_transactions)) %>% 
+  
+  mutate(sales_prop_type_simple = fct_relevel(sales_prop_type_simple,
+                                           c("other", "new_flat", "existing_flat")))
+
+# logical selectors for baseline and latest transaction numbers
+la_selc <- sales_plot_simplified$local_authority_name == la_name
+exist_selc <- sales_plot_simplified$sales_prop_type_simple == "existing_flat"
+bl_date_selc <- sales_plot_simplified$year_preceding == dmy("01-07-2017")
+
+latest_date <- max(sales_plot_simplified$year_preceding)
+latest_date_selc <- sales_plot_simplified$year_preceding == latest_date
+
+# pull baseline and latest numbers of transaction (i.e. pre Grenfell) number of transactions in the LA
+baseline_trans <- sales_plot_simplified$num_transactions[la_selc & exist_selc & bl_date_selc]
+latest_date_trans <- sales_plot_simplified$num_transactions[la_selc & exist_selc & latest_date_selc] 
+
+# calculate percentage in transaction numbers
+perc_change <- ((latest_date_trans - baseline_trans) / baseline_trans) * 100
+
+# define plot reference lines
+h_ref_lines <- c(baseline_trans, latest_date_trans)
+v_ref_lines <- tribble(
+  ~date, ~event,
+  dmy("14-06-2017"), "Grenfell Tower fire",
+  dmy("01-12-2019"), "EWS1 introduced"
+)
+
+```
+
+```{r fig.asp = 0.6, fig.width = 7, out.width = "100%"}
+showtext::showtext_auto()
+
+sales_plot_simplified %>% 
+  
+  ggplot() +
+  
+  #geom_hline(yintercept = h_ref_lines, size = 1.5, colour = "grey80") +
+  
+  geom_vline(data = v_ref_lines,
+             aes(xintercept = date),
+             size = 1, colour = "grey80") +
+  geom_text(data = v_ref_lines,
+             aes(x = date, y = 3000, label = event),
+            hjust = -0.1, family = "Lato")+ 
+  
+  geom_area(aes(year_preceding, num_transactions,
+                fill = sales_prop_type_simple)) +
+
+  scale_fill_manual(values = c(alpha("grey80", 0.5), alpha("#82c2ff", 0.5), "#458CFF")) +
+  labs(title = str_c("Annual property sales: ", la_name),
+       x = "") +
+  scale_x_date(limits = c(min(sales_plot_simplified$year_preceding), 
+                          max(sales_plot_simplified$year_preceding) %m+% months(1)), 
+               expand = c(0,0)) +
+
+  explanatory_theme_2()
+
+showtext::showtext_auto(FALSE)
+
+ggsave("Newham.png")
+```
+
+```{r}
+
+london_las_in_top_20 <- c("Barnet", "Camden", "City of London", "Greenwich", "Hackney",
+                "Haringey", "Islington", "Lambeth", "Newham", "Southwark", "Tower Hamlets",
+                "Wandsworth", "Westminster")
+
+baseline_date <- dmy("01-07-2017")
+
+bsf_top_20 <- read_csv("MHCLG_BSF_and_ACM_BSF_by_Local_Authority.csv",
+         skip = 1) %>% 
+  janitor::clean_names() %>% 
+  na.omit() %>% 
+  slice_max(order_by = count, n = 20)
+
+
+change_in_trans_num <- sales_plot %>% 
+  
+  # focus on the 20 LAs with the most BSF applications
+  filter(local_authority_name %in% bsf_top_20$local_authority) %>%
+  
+  # focus down on the two dates needed to calcualte percent change in 
+  # number of transactions since the baseline date.
+  filter(year_preceding == baseline_date |
+           year_preceding == max(sales_plot$year_preceding)) %>% 
+  
+  # simplify the classification of property sales types
+  mutate(sales_prop_type_simple = case_when(
+    !str_detect(sales_property_type, "flat") ~ "other",
+    TRUE ~ sales_property_type
+  )) %>% 
+  group_by(year_preceding, local_authority_name, sales_prop_type_simple) %>% 
+  summarise(num_transactions = sum(num_transactions)) %>% 
+  
+  # change factor order for plotting
+  mutate(sales_prop_type_simple = fct_relevel(sales_prop_type_simple,
+                                           c("other", "new_flat", "existing_flat"))) %>% 
+  # classify each local authority as in London or not
+  mutate(is_london_la = local_authority_name %in% london_las_in_top_20)
+```
+
+```{r}
+pc_df <- change_in_trans_num %>% 
+  pivot_wider(names_from = year_preceding, values_from = num_transactions) %>% 
+  rename(baseline = `2017-07-01`,
+         latest = `2021-01-01`) %>% 
+  mutate(pc_change = (latest - baseline) / baseline)
+
+pc_df
+```
+
+```{r}
+pc_df %>% 
+  filter(sales_prop_type_simple == "existing_flat",
+         is_london_la == FALSE) %>% 
+
+  
+  ggplot(aes(x = baseline, xend = latest, y = fct_reorder(local_authority_name, baseline))) +
+  ggalt::geom_dumbbell(size_x = 5, size_xend = 5, colour_x = "blue", colour_xend = "red",
+                       colour = "grey50", size = 2) +
+  
+  # geom_rect(aes(ymin = -Inf, ymax = Inf,
+  #           xmin = max(.data$baseline) + 100, xmax = max(.data$baseline) + 250)) +
+  
+  geom_text(aes(y = fct_reorder(local_authority_name, baseline),
+                x = max(.data$baseline) + 75,
+                label = round(pc_change,2) * 100),
+            family = "Lato") +
+
+  #facet_wrap(~ is_london_la, scales = "free_y") +
+  explanatory_theme_2()
+
+ggsave("dumbell.svg")
+```
+
